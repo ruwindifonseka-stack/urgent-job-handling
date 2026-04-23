@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Urgent Job Manager</title>
+
     <style>
         :root {
             --bg: #0f172a;
@@ -16,16 +18,19 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             background-color: var(--bg);
             color: var(--text);
             margin: 0;
             padding: 20px;
         }
 
-        h1 { text-align: center; font-weight: 300; letter-spacing: 2px; }
+        h1 {
+            text-align: center;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
 
-        /* Input Section */
         .input-container {
             display: flex;
             justify-content: center;
@@ -43,24 +48,22 @@
         }
 
         button {
-            padding: 12px 24px;
-            border-radius: 8px;
+            padding: 10px 14px;
+            border-radius: 6px;
             border: none;
             background: #6366f1;
             color: white;
             cursor: pointer;
-            font-weight: bold;
-            transition: transform 0.2s;
         }
 
-        button:hover { transform: scale(1.05); background: #818cf8; }
+        button:hover {
+            background: #818cf8;
+        }
 
-        /* Board Layout */
         .board {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
-            align-items: start;
         }
 
         .column {
@@ -71,104 +74,137 @@
             border-top: 5px solid #334155;
         }
 
-        .column[data-status="pending"] { border-color: var(--pending); }
-        .column[data-status="start"] { border-color: var(--start); }
-        .column[data-status="hold"] { border-color: var(--hold); }
-        .column[data-status="complete"] { border-color: var(--complete); }
+        .column[data-status="pending"] {
+            border-color: var(--pending);
+        }
+
+        .column[data-status="start"] {
+            border-color: var(--start);
+        }
+
+        .column[data-status="hold"] {
+            border-color: var(--hold);
+        }
+
+        .column[data-status="complete"] {
+            border-color: var(--complete);
+        }
 
         .column h2 {
             text-align: center;
-            font-size: 1.2rem;
-            text-transform: uppercase;
-            margin-bottom: 20px;
             color: #94a3b8;
         }
 
-        /* Job Cards */
         .job-card {
             background: #334155;
-            padding: 15px;
+            padding: 12px;
             border-radius: 8px;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             cursor: grab;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-            transition: opacity 0.2s;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .job-card:active { cursor: grabbing; }
-        .dragging { opacity: 0.5; }
+        .job-id {
+            font-weight: bold;
+            cursor: pointer;
+        }
 
-        .job-id { font-weight: bold; color: #fff; }
-        
-        /* Dropzone visual cue */
-        .column.drag-over {
-            background: #2d3748;
+        .actions button {
+            margin-left: 5px;
+            background: #475569;
+        }
+
+        .drag-over {
             outline: 2px dashed #6366f1;
         }
     </style>
 </head>
+
 <body>
 
     <h1>URGENT JOBS COMMAND</h1>
 
     <div class="input-container">
-        <input type="text" id="jobInput" placeholder="Enter Job ID (e.g. #JOB-101)">
+        <input type="text" id="jobInput" placeholder="Enter Job ID (#JOB-101)">
         <button onclick="addJob()">Add Job</button>
     </div>
 
     <div class="board">
-        <div class="column" data-status="pending" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="clearStatus(event)">
+
+        <div class="column" data-status="pending" ondrop="drop(event)" ondragover="allowDrop(event)"
+            ondragleave="clearStatus(event)">
             <h2>Pending</h2>
-            <div id="pending-tasks"></div>
         </div>
-        
-        <div class="column" data-status="start" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="clearStatus(event)">
+
+        <div class="column" data-status="start" ondrop="drop(event)" ondragover="allowDrop(event)"
+            ondragleave="clearStatus(event)">
             <h2>Start</h2>
         </div>
 
-        <div class="column" data-status="hold" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="clearStatus(event)">
+        <div class="column" data-status="hold" ondrop="drop(event)" ondragover="allowDrop(event)"
+            ondragleave="clearStatus(event)">
             <h2>Hold</h2>
         </div>
 
-        <div class="column" data-status="complete" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="clearStatus(event)">
+        <div class="column" data-status="complete" ondrop="drop(event)" ondragover="allowDrop(event)"
+            ondragleave="clearStatus(event)">
             <h2>Complete</h2>
         </div>
+
     </div>
 
     <script>
+
+        // CREATE
         function addJob() {
             const input = document.getElementById('jobInput');
-            const jobId = input.value.trim();
-            
-            if (jobId === "") {
-                alert("Please enter a valid Job ID");
-                return;
-            }
+            const text = input.value.trim();
 
+            if (!text) return alert("Enter Job ID");
+
+            const card = createCard(text, 'job-' + Date.now());
+            document.querySelector('[data-status="pending"]').appendChild(card);
+
+            input.value = "";
+            saveJobs();
+        }
+
+        // CARD BUILDER
+        function createCard(text, id) {
             const card = document.createElement('div');
             card.className = 'job-card';
             card.draggable = true;
-            card.id = 'job-' + Date.now(); // Unique ID for the element
-            card.innerHTML = `<span class="job-id">${jobId}</span>`;
-            
-            // Drag Start Event
-            card.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData("text", e.target.id);
-                card.classList.add('dragging');
+            card.id = id;
+
+            card.innerHTML = `
+        <span class="job-id">${text}</span>
+        <div class="actions">
+            <button onclick="editJob('${id}')">✏️</button>
+            <button onclick="deleteJob('${id}')">❌</button>
+        </div>
+    `;
+
+            // CLICK TO COPY
+            card.querySelector('.job-id').addEventListener('click', () => {
+                navigator.clipboard.writeText(text)
+                    .then(() => alert("Copied: " + text))
+                    .catch(() => alert("Copy failed"));
             });
 
-            card.addEventListener('dragend', () => {
-                card.classList.remove('dragging');
-            });
-
-            document.getElementById('pending-tasks').appendChild(card);
-            input.value = ""; // Clear input
+            addDragEvents(card);
+            return card;
         }
 
-        // Drag and Drop Logic
+        // DRAG EVENTS
+        function addDragEvents(card) {
+            card.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData("text", card.id);
+            });
+        }
+
+        // DROP LOGIC
         function allowDrop(e) {
             e.preventDefault();
             e.currentTarget.classList.add('drag-over');
@@ -182,13 +218,70 @@
             e.preventDefault();
             const column = e.currentTarget;
             column.classList.remove('drag-over');
-            
-            const data = e.dataTransfer.getData("text");
-            const draggedElement = document.getElementById(data);
-            
-            // Append the card to the new column
-            column.appendChild(draggedElement);
+
+            const id = e.dataTransfer.getData("text");
+            const el = document.getElementById(id);
+
+            column.appendChild(el);
+            saveJobs();
         }
+
+        // DELETE
+        function deleteJob(id) {
+            if (confirm("Delete this job?")) {
+                document.getElementById(id).remove();
+                saveJobs();
+            }
+        }
+
+        // EDIT
+        function editJob(id) {
+            const el = document.getElementById(id);
+            const span = el.querySelector('.job-id');
+
+            const newVal = prompt("Edit Job ID:", span.innerText);
+
+            if (newVal && newVal.trim()) {
+                span.innerText = newVal.trim();
+
+                // update click copy
+                span.onclick = () => {
+                    navigator.clipboard.writeText(newVal.trim());
+                };
+
+                saveJobs();
+            }
+        }
+
+        // SAVE
+        function saveJobs() {
+            const jobs = [];
+
+            document.querySelectorAll('.job-card').forEach(card => {
+                jobs.push({
+                    id: card.id,
+                    text: card.querySelector('.job-id').innerText,
+                    status: card.parentElement.getAttribute("data-status")
+                });
+            });
+
+            localStorage.setItem("jobs", JSON.stringify(jobs));
+        }
+
+        // LOAD
+        function loadJobs() {
+            const jobs = JSON.parse(localStorage.getItem("jobs")) || [];
+
+            jobs.forEach(job => {
+                const card = createCard(job.text, job.id);
+                document.querySelector(`[data-status="${job.status}"]`).appendChild(card);
+            });
+        }
+
+        window.onload = loadJobs;
+
     </script>
+
 </body>
+
 </html>
