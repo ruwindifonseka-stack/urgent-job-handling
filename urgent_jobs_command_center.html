@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Urgent Jobs Command</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080c14;--surface:#0d1424;--card:#111927;--border:#1e2d45;--border2:#2a3f5f;
+  --text:#e8f0fe;--muted:#6b8ab0;--accent:#3b82f6;--accent2:#60a5fa;
+  --pending:#f59e0b;--inprog:#3b82f6;--hold:#ef4444;--done:#10b981;
+  --admin:#a855f7;--leader:#f59e0b;--member:#10b981;
+  --font:'Syne',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+.scanline{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);z-index:9999}
+.app{display:flex;flex-direction:column;min-height:100vh}
+
+/* LOGIN */
+.login-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:2rem;padding:2rem}
+.login-logo{font-size:11px;letter-spacing:.35em;color:var(--muted);font-family:var(--mono);text-transform:uppercase}
+.login-title{font-size:2.5rem;font-weight:800;letter-spacing:-.02em;background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem;width:100%;max-width:400px;display:flex;flex-direction:column;gap:1rem}
+.login-box h2{font-size:.75rem;letter-spacing:.2em;color:var(--muted);font-family:var(--mono);text-transform:uppercase;margin-bottom:.5rem}
+.user-btn{display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border:1px solid var(--border);border-radius:10px;background:var(--card);cursor:pointer;transition:all .15s;text-align:left}
+.user-btn:hover{border-color:var(--accent);background:#0f1e35}
+.user-btn.selected{border-color:var(--accent);background:#0f1e35;box-shadow:0 0 0 1px var(--accent)}
+.user-avatar{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;font-family:var(--mono);flex-shrink:0}
+.user-info-label{font-size:.9rem;font-weight:700}
+.user-role-badge{font-size:.65rem;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:4px;display:inline-block;margin-top:3px}
+.pin-row{display:flex;gap:.5rem;align-items:center}
+.pin-row input{flex:1;padding:.75rem 1rem;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:.95rem;letter-spacing:.2em}
+.pin-row input:focus{outline:none;border-color:var(--accent)}
+.btn-primary{padding:.75rem 1.5rem;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:var(--font);font-weight:700;font-size:.9rem;cursor:pointer;transition:all .15s;letter-spacing:.02em}
+.btn-primary:hover{background:var(--accent2)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.err-msg{font-size:.8rem;color:#f87171;font-family:var(--mono);text-align:center;min-height:1rem}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.5rem;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.header-left{display:flex;align-items:center;gap:1rem}
+.logo-text{font-size:.8rem;font-family:var(--mono);letter-spacing:.15em;color:var(--muted);text-transform:uppercase}
+.logo-main{font-size:1.1rem;font-weight:800;letter-spacing:-.01em;color:var(--text)}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#10b981;animation:pulse 2s infinite;display:inline-block;margin-right:4px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.header-right{display:flex;align-items:center;gap:.75rem}
+.user-chip{display:flex;align-items:center;gap:.6rem;padding:.4rem .9rem;background:var(--card);border:1px solid var(--border);border-radius:8px;font-size:.8rem}
+.chip-avatar{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;font-family:var(--mono)}
+.btn-sm{padding:.4rem .9rem;font-size:.75rem;font-family:var(--mono);border:1px solid var(--border2);background:transparent;color:var(--muted);border-radius:6px;cursor:pointer;letter-spacing:.05em;transition:all .15s}
+.btn-sm:hover{border-color:var(--accent);color:var(--text)}
+
+/* NAV TABS */
+.nav-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--surface);padding:0 1.5rem}
+.nav-tab{padding:.75rem 1.25rem;font-size:.8rem;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;display:flex;align-items:center;gap:.5rem}
+.nav-tab:hover{color:var(--text)}
+.nav-tab.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.count-pill{background:var(--accent);color:#fff;font-size:.65rem;padding:1px 6px;border-radius:10px}
+
+/* MAIN */
+.main{flex:1;padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap input{width:100%;padding:.6rem 1rem .6rem 2.25rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:.85rem}
+.search-wrap input:focus{outline:none;border-color:var(--accent)}
+.search-icon{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.85rem}
+.filter-sel{padding:.6rem .9rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:.8rem;cursor:pointer}
+.filter-sel:focus{outline:none;border-color:var(--accent)}
+.btn-add{padding:.6rem 1.25rem;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:var(--mono);font-size:.8rem;font-weight:600;cursor:pointer;letter-spacing:.05em;white-space:nowrap;transition:all .15s}
+.btn-add:hover{background:var(--accent2)}
+
+/* BOARD */
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;align-items:start}
+@media(max-width:900px){.board{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.board{grid-template-columns:1fr}}
+.col{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;min-height:300px;display:flex;flex-direction:column;gap:.75rem;transition:all .2s}
+.col.drag-over{border-color:var(--accent);background:#0a1628}
+.col-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+.col-title{font-size:.7rem;font-family:var(--mono);letter-spacing:.15em;text-transform:uppercase;font-weight:600;display:flex;align-items:center;gap:.5rem}
+.col-count{font-family:var(--mono);font-size:.7rem;color:var(--muted);background:var(--card);padding:1px 7px;border-radius:10px}
+.status-bar{width:28px;height:3px;border-radius:2px;display:inline-block}
+
+/* JOB CARD */
+.job-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem;cursor:grab;transition:all .15s;position:relative;overflow:hidden}
+.job-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.job-card.dragging{opacity:.4}
+.job-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:2px 0 0 2px}
+.job-card[data-status="pending"]::before{background:var(--pending)}
+.job-card[data-status="inprog"]::before{background:var(--inprog)}
+.job-card[data-status="hold"]::before{background:var(--hold)}
+.job-card[data-status="done"]::before{background:var(--done)}
+.card-id{font-family:var(--mono);font-size:.9rem;font-weight:700;color:var(--text);cursor:pointer;transition:color .15s;display:flex;align-items:center;gap:.4rem}
+.card-id:hover{color:var(--accent2)}
+.copy-flash{font-size:.6rem;color:var(--done);font-family:var(--mono);letter-spacing:.05em}
+.card-meta{margin-top:.5rem;display:flex;flex-direction:column;gap:.3rem}
+.card-assignee{font-size:.75rem;color:var(--muted);font-family:var(--mono);display:flex;align-items:center;gap:.4rem}
+.assignee-dot{width:6px;height:6px;border-radius:50%;background:var(--member);display:inline-block}
+.card-note{font-size:.75rem;color:#6b8ab0;font-style:italic;margin-top:.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-ts{font-size:.65rem;color:#3a5070;font-family:var(--mono);margin-top:.4rem}
+.card-actions{display:flex;gap:.4rem;margin-top:.6rem;padding-top:.6rem;border-top:1px solid var(--border)}
+.card-btn{padding:.3rem .6rem;font-size:.65rem;font-family:var(--mono);border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:5px;cursor:pointer;transition:all .15s;letter-spacing:.04em}
+.card-btn:hover{border-color:var(--border2);color:var(--text)}
+.card-btn.danger:hover{border-color:#ef4444;color:#f87171}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:flex;align-items:center;justify-content:center;padding:1rem}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:2rem;width:100%;max-width:480px;display:flex;flex-direction:column;gap:1.25rem}
+.modal-title{font-size:1rem;font-weight:700;letter-spacing:.01em;display:flex;align-items:center;gap:.5rem}
+.form-row{display:flex;flex-direction:column;gap:.4rem}
+.form-label{font-size:.7rem;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.form-input{padding:.7rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:.85rem;transition:border .15s;width:100%}
+.form-input:focus{outline:none;border-color:var(--accent)}
+.modal-actions{display:flex;gap:.75rem;justify-content:flex-end;padding-top:.5rem;border-top:1px solid var(--border)}
+.btn-cancel{padding:.65rem 1.25rem;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;font-family:var(--mono);font-size:.8rem;cursor:pointer;transition:all .15s}
+.btn-cancel:hover{border-color:var(--border2);color:var(--text)}
+
+/* ADMIN PANEL */
+.admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem}
+.user-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;display:flex;flex-direction:column;gap:.75rem}
+.user-card-header{display:flex;align-items:center;gap:.75rem}
+.big-avatar{width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;font-family:var(--mono);flex-shrink:0}
+.user-name{font-weight:700;font-size:.95rem}
+.user-role-txt{font-size:.7rem;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
+.user-stats{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;padding-top:.75rem;border-top:1px solid var(--border)}
+.stat-item{background:var(--card);border-radius:8px;padding:.6rem .75rem;display:flex;flex-direction:column;gap:2px}
+.stat-num{font-family:var(--mono);font-size:1.1rem;font-weight:700;color:var(--text)}
+.stat-lbl{font-size:.65rem;color:var(--muted);font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.user-pin{font-family:var(--mono);font-size:.7rem;color:var(--muted);padding:.4rem .75rem;background:var(--card);border:1px solid var(--border);border-radius:6px;display:flex;justify-content:space-between}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.75rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem}
+.sc-num{font-family:var(--mono);font-size:1.75rem;font-weight:700;line-height:1}
+.sc-lbl{font-size:.65rem;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:.4rem}
+.sc-bar{height:2px;border-radius:1px;margin-top:.6rem}
+
+/* SYNC BAR */
+.sync-bar{display:flex;align-items:center;gap:.5rem;font-size:.7rem;font-family:var(--mono);color:var(--muted);padding:.4rem 1.5rem;background:var(--surface);border-bottom:1px solid var(--border)}
+.sync-tick{color:var(--done)}
+
+/* EMPTY */
+.empty-col{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 0;gap:.5rem;color:var(--border2);font-size:.75rem;font-family:var(--mono);letter-spacing:.08em}
+.empty-icon{font-size:1.5rem}
+
+select option{background:#0d1424}
+</style>
+</head>
+<body>
+<div class="scanline"></div>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+const {useState,useEffect,useRef,useCallback}=React;
+
+const USERS=[
+  {id:'admin',name:'Admin',role:'admin',pin:'0000',color:'#a855f7',bg:'#2d1b4e'},
+  {id:'leader1',name:'Leader',role:'leader',pin:'1111',color:'#f59e0b',bg:'#3b2800'},
+  {id:'member1',name:'Alex (Member)',role:'member',pin:'2222',color:'#10b981',bg:'#003322'},
+  {id:'member2',name:'Sam (Member)',role:'member',pin:'3333',color:'#3b82f6',bg:'#001a3b'},
+  {id:'member3',name:'Jordan (Member)',role:'member',pin:'4444',color:'#ec4899',bg:'#3b0022'},
+];
+
+const STATUSES=[
+  {key:'pending',label:'Pending',color:'#f59e0b'},
+  {key:'inprog',label:'In Progress',color:'#3b82f6'},
+  {key:'hold',label:'On Hold',color:'#ef4444'},
+  {key:'done',label:'Complete',color:'#10b981'},
+];
+
+const STORAGE_KEY='ujc_jobs_v3';
+const USERS_KEY='ujc_users_v3';
+
+async function storageGet(key,shared=true){
+  try{const r=await window.storage.get(key,shared);return r?JSON.parse(r.value):null}catch{return null}
+}
+async function storageSet(key,val,shared=true){
+  try{await window.storage.set(key,JSON.stringify(val),shared)}catch(e){console.error(e)}
+}
+
+function initials(name){return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+
+function Avatar({user,size=28}){
+  return React.createElement('div',{className:'chip-avatar',style:{width:size,height:size,background:user.bg,color:user.color,fontSize:size*.35+'px',borderRadius:size*.22+'px',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontFamily:'JetBrains Mono,monospace'}},initials(user.name));
+}
+
+function RoleBadge({role}){
+  const colors={admin:'#a855f7',leader:'#f59e0b',member:'#10b981'};
+  return React.createElement('span',{className:'user-role-badge',style:{background:colors[role]+'22',color:colors[role]}},role);
+}
+
+function LoginView({onLogin}){
+  const [sel,setSel]=useState(null);
+  const [pin,setPin]=useState('');
+  const [err,setErr]=useState('');
+  function attempt(){
+    if(!sel){setErr('Select a user');return}
+    if(pin===sel.pin){onLogin(sel);setErr('')}
+    else{setErr('Incorrect PIN');setPin('')}
+  }
+  const members=USERS.filter(u=>u.role==='member');
+  const others=USERS.filter(u=>u.role!=='member');
+  return React.createElement('div',{className:'login-wrap'},
+    React.createElement('div',{style:{textAlign:'center'}},
+      React.createElement('div',{className:'login-logo'},'// TACTICAL OPS //'),
+      React.createElement('div',{className:'login-title'},'URGENT JOBS COMMAND'),
+      React.createElement('div',{style:{fontSize:'.8rem',color:'#6b8ab0',fontFamily:'JetBrains Mono,monospace',marginTop:'.5rem'}},'Real-time team coordination platform')
+    ),
+    React.createElement('div',{className:'login-box'},
+      React.createElement('h2',null,'Select User'),
+      ...others.map(u=>React.createElement('button',{key:u.id,className:'user-btn'+(sel?.id===u.id?' selected':''),onClick:()=>{setSel(u);setPin('');setErr('')}},
+        React.createElement('div',{className:'user-avatar',style:{background:u.bg,color:u.color}},initials(u.name)),
+        React.createElement('div',null,
+          React.createElement('div',{className:'user-info-label'},u.name),
+          React.createElement(RoleBadge,{role:u.role})
+        )
+      )),
+      React.createElement('details',{style:{cursor:'pointer'}},
+        React.createElement('summary',{style:{fontSize:'.75rem',fontFamily:'JetBrains Mono,monospace',color:'#6b8ab0',letterSpacing:'.08em',listStyle:'none',padding:'.5rem 0'}},'▸ Team Members'),
+        React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:'.5rem',marginTop:'.5rem'}},
+          ...members.map(u=>React.createElement('button',{key:u.id,className:'user-btn'+(sel?.id===u.id?' selected':''),onClick:()=>{setSel(u);setPin('');setErr('')}},
+            React.createElement('div',{className:'user-avatar',style:{background:u.bg,color:u.color}},initials(u.name)),
+            React.createElement('div',null,
+              React.createElement('div',{className:'user-info-label'},u.name),
+              React.createElement(RoleBadge,{role:u.role})
+            )
+          ))
+        )
+      ),
+      sel&&React.createElement('div',{className:'pin-row'},
+        React.createElement('input',{type:'password',maxLength:4,value:pin,onChange:e=>{setPin(e.target.value);setErr('')},onKeyDown:e=>e.key==='Enter'&&attempt(),placeholder:'PIN',autoFocus:true}),
+        React.createElement('button',{className:'btn-primary',onClick:attempt},'Login')
+      ),
+      React.createElement('div',{className:'err-msg'},err||' '),
+      React.createElement('div',{style:{fontSize:'.65rem',color:'#3a5070',fontFamily:'JetBrains Mono,monospace',textAlign:'center'}},'Demo PINs: Admin=0000 | Leader=1111 | Members=2222,3333,4444')
+    )
+  );
+}
+
+function JobCard({job,user,onEdit,onDelete,onCopy,dragHandlers}){
+  const [copied,setCopied]=useState(false);
+  const assignee=USERS.find(u=>u.id===job.assignedTo);
+  function copy(){
+    navigator.clipboard.writeText(job.jobId).catch(()=>{});
+    setCopied(true);setTimeout(()=>setCopied(false),1500);
+    if(onCopy)onCopy(job.jobId);
+  }
+  const canEdit=user.role==='admin'||user.role==='leader';
+  return React.createElement('div',{
+    className:'job-card',
+    'data-status':job.status,
+    draggable:user.role==='admin'||user.role==='leader'||user.role==='member',
+    ...dragHandlers(job.id),
+    style:{cursor:user.role==='member'?'default':'grab'}
+  },
+    React.createElement('div',{className:'card-id',onClick:copy},
+      React.createElement('span',null,job.jobId),
+      copied&&React.createElement('span',{className:'copy-flash'},'✓ COPIED')
+    ),
+    React.createElement('div',{className:'card-meta'},
+      assignee&&React.createElement('div',{className:'card-assignee'},
+        React.createElement('span',{className:'assignee-dot',style:{background:assignee.color}}),
+        assignee.name
+      ),
+      job.note&&React.createElement('div',{className:'card-note'},job.note),
+      React.createElement('div',{className:'card-ts'},new Date(job.createdAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}))
+    ),
+    canEdit&&React.createElement('div',{className:'card-actions'},
+      React.createElement('button',{className:'card-btn',onClick:()=>onEdit(job)},'✏ EDIT'),
+      React.createElement('button',{className:'card-btn danger',onClick:()=>onDelete(job.id)},'✕ DEL')
+    )
+  );
+}
+
+function AddEditModal({job,users,onSave,onClose}){
+  const [jobId,setJobId]=useState(job?.jobId||'');
+  const [assignedTo,setAssignedTo]=useState(job?.assignedTo||'');
+  const [note,setNote]=useState(job?.note||'');
+  const [status,setStatus]=useState(job?.status||'pending');
+  const members=users.filter(u=>u.role==='member');
+  function save(){
+    if(!jobId.trim()){alert('Job ID required');return}
+    onSave({...job,jobId:jobId.trim(),assignedTo,note,status,id:job?.id||'job-'+Date.now(),createdAt:job?.createdAt||Date.now()});
+  }
+  return React.createElement('div',{className:'modal-overlay',onClick:e=>e.target===e.currentTarget&&onClose()},
+    React.createElement('div',{className:'modal'},
+      React.createElement('div',{className:'modal-title'},'⊕  '+(job?.id?'Edit Job':'New Job')),
+      React.createElement('div',{className:'form-row'},
+        React.createElement('label',{className:'form-label'},'Job ID'),
+        React.createElement('input',{className:'form-input',value:jobId,onChange:e=>setJobId(e.target.value),placeholder:'#JOB-101',autoFocus:true,onKeyDown:e=>e.key==='Enter'&&save()})
+      ),
+      React.createElement('div',{className:'form-row'},
+        React.createElement('label',{className:'form-label'},'Assign To'),
+        React.createElement('select',{className:'form-input filter-sel',value:assignedTo,onChange:e=>setAssignedTo(e.target.value),style:{width:'100%'}},
+          React.createElement('option',{value:''},'Unassigned'),
+          ...members.map(u=>React.createElement('option',{key:u.id,value:u.id},u.name))
+        )
+      ),
+      React.createElement('div',{className:'form-row'},
+        React.createElement('label',{className:'form-label'},'Status'),
+        React.createElement('select',{className:'form-input filter-sel',value:status,onChange:e=>setStatus(e.target.value),style:{width:'100%'}},
+          ...STATUSES.map(s=>React.createElement('option',{key:s.key,value:s.key},s.label))
+        )
+      ),
+      React.createElement('div',{className:'form-row'},
+        React.createElement('label',{className:'form-label'},'Note (optional)'),
+        React.createElement('input',{className:'form-input',value:note,onChange:e=>setNote(e.target.value),placeholder:'Brief description...'})
+      ),
+      React.createElement('div',{className:'modal-actions'},
+        React.createElement('button',{className:'btn-cancel',onClick:onClose},'Cancel'),
+        React.createElement('button',{className:'btn-primary',onClick:save},job?.id?'Update':'Add Job')
+      )
+    )
+  );
+}
+
+function BoardView({user,jobs,setJobs}){
+  const [search,setSearch]=useState('');
+  const [filterStatus,setFilterStatus]=useState('all');
+  const [filterAssignee,setFilterAssignee]=useState('all');
+  const [modal,setModal]=useState(null);
+  const [dragging,setDragging]=useState(null);
+  const canCRUD=user.role==='admin'||user.role==='leader';
+
+  const visibleJobs=jobs.filter(j=>{
+    if(user.role==='member'&&j.assignedTo!==user.id)return false;
+    if(filterStatus!=='all'&&j.status!==filterStatus)return false;
+    if(filterAssignee!=='all'&&j.assignedTo!==filterAssignee)return false;
+    if(search&&!j.jobId.toLowerCase().includes(search.toLowerCase())&&!(j.note||'').toLowerCase().includes(search.toLowerCase()))return false;
+    return true;
+  });
+
+  async function saveJobs(updated){
+    setJobs(updated);
+    await storageSet(STORAGE_KEY,updated);
+  }
+
+  function handleSave(data){
+    const exists=jobs.find(j=>j.id===data.id);
+    const updated=exists?jobs.map(j=>j.id===data.id?data:j):[...jobs,data];
+    saveJobs(updated);
+    setModal(null);
+  }
+
+  function handleDelete(id){
+    if(!confirm('Delete this job?'))return;
+    saveJobs(jobs.filter(j=>j.id!==id));
+  }
+
+  function dragHandlers(id){
+    return{
+      onDragStart:()=>setDragging(id),
+      onDragEnd:()=>setDragging(null),
+      className:'job-card'+(dragging===id?' dragging':'')
+    };
+  }
+
+  function onDrop(e,status){
+    e.preventDefault();
+    if(!dragging)return;
+    const updated=jobs.map(j=>j.id===dragging?{...j,status}:j);
+    saveJobs(updated);
+    setDragging(null);
+  }
+
+  const members=USERS.filter(u=>u.role==='member');
+  return React.createElement('div',{className:'main'},
+    modal&&React.createElement(AddEditModal,{job:modal==='new'?null:modal,users:USERS,onSave:handleSave,onClose:()=>setModal(null)}),
+    React.createElement('div',{className:'stats-row'},
+      ...STATUSES.map(s=>{
+        const cnt=visibleJobs.filter(j=>j.status===s.key).length;
+        return React.createElement('div',{key:s.key,className:'stat-card'},
+          React.createElement('div',{className:'sc-num',style:{color:s.color}},cnt),
+          React.createElement('div',{className:'sc-lbl'},s.label),
+          React.createElement('div',{className:'sc-bar',style:{background:s.color,width:(cnt*30)+'px',maxWidth:'100%'}})
+        );
+      }),
+      React.createElement('div',{className:'stat-card'},
+        React.createElement('div',{className:'sc-num',style:{color:'#60a5fa'}},visibleJobs.length),
+        React.createElement('div',{className:'sc-lbl'},'Total'),
+        React.createElement('div',{className:'sc-bar',style:{background:'#60a5fa',width:'100%'}})
+      )
+    ),
+    React.createElement('div',{className:'toolbar'},
+      React.createElement('div',{className:'search-wrap'},
+        React.createElement('span',{className:'search-icon'},'⌕'),
+        React.createElement('input',{value:search,onChange:e=>setSearch(e.target.value),placeholder:'Search job ID or note...'})
+      ),
+      React.createElement('select',{className:'filter-sel',value:filterStatus,onChange:e=>setFilterStatus(e.target.value)},
+        React.createElement('option',{value:'all'},'All Status'),
+        ...STATUSES.map(s=>React.createElement('option',{key:s.key,value:s.key},s.label))
+      ),
+      (user.role==='admin'||user.role==='leader')&&React.createElement('select',{className:'filter-sel',value:filterAssignee,onChange:e=>setFilterAssignee(e.target.value)},
+        React.createElement('option',{value:'all'},'All Members'),
+        ...members.map(u=>React.createElement('option',{key:u.id,value:u.id},u.name))
+      ),
+      canCRUD&&React.createElement('button',{className:'btn-add',onClick:()=>setModal('new')},'+ ADD JOB')
+    ),
+    React.createElement('div',{className:'board'},
+      STATUSES.map(s=>{
+        const colJobs=visibleJobs.filter(j=>j.status===s.key);
+        return React.createElement('div',{
+          key:s.key,className:'col',
+          onDragOver:e=>e.preventDefault(),
+          onDrop:e=>onDrop(e,s.key)
+        },
+          React.createElement('div',{className:'col-header'},
+            React.createElement('div',{className:'col-title'},
+              React.createElement('span',{className:'status-bar',style:{background:s.color}}),
+              s.label
+            ),
+            React.createElement('span',{className:'col-count'},colJobs.length)
+          ),
+          colJobs.length===0&&React.createElement('div',{className:'empty-col'},
+            React.createElement('div',{className:'empty-icon'},'□'),
+            'No jobs'
+          ),
+          ...colJobs.map(j=>React.createElement(JobCard,{
+            key:j.id,job:j,user,
+            onEdit:canCRUD?setModal:null,
+            onDelete:canCRUD?handleDelete:null,
+            dragHandlers
+          }))
+        );
+      })
+    )
+  );
+}
+
+function AdminView({jobs,users}){
+  const members=users.filter(u=>u.role==='member');
+  const leaders=users.filter(u=>u.role==='leader');
+  const allCards=[...leaders,...members];
+  return React.createElement('div',{className:'main'},
+    React.createElement('div',{style:{fontSize:'.75rem',fontFamily:'JetBrains Mono,monospace',color:'#6b8ab0',letterSpacing:'.05em',paddingBottom:'.5rem',borderBottom:'1px solid #1e2d45',marginBottom:'.5rem'}},'SYSTEM — USER DIRECTORY'),
+    React.createElement('div',{className:'admin-grid'},
+      users.map(u=>{
+        const assigned=jobs.filter(j=>j.assignedTo===u.id);
+        const done=assigned.filter(j=>j.status==='done').length;
+        const active=assigned.filter(j=>j.status==='inprog').length;
+        return React.createElement('div',{key:u.id,className:'user-card'},
+          React.createElement('div',{className:'user-card-header'},
+            React.createElement('div',{className:'big-avatar',style:{background:u.bg,color:u.color}},initials(u.name)),
+            React.createElement('div',null,
+              React.createElement('div',{className:'user-name'},u.name),
+              React.createElement('div',{className:'user-role-txt'},u.role)
+            )
+          ),
+          u.role==='member'&&React.createElement('div',{className:'user-stats'},
+            React.createElement('div',{className:'stat-item'},
+              React.createElement('div',{className:'stat-num',style:{color:'#3b82f6'}},assigned.length),
+              React.createElement('div',{className:'stat-lbl'},'Assigned')
+            ),
+            React.createElement('div',{className:'stat-item'},
+              React.createElement('div',{className:'stat-num',style:{color:'#10b981'}},done),
+              React.createElement('div',{className:'stat-lbl'},'Done')
+            ),
+            React.createElement('div',{className:'stat-item'},
+              React.createElement('div',{className:'stat-num',style:{color:'#f59e0b'}},active),
+              React.createElement('div',{className:'stat-lbl'},'Active')
+            ),
+            React.createElement('div',{className:'stat-item'},
+              React.createElement('div',{className:'stat-num',style:{color:'#ef4444'}},assigned.filter(j=>j.status==='hold').length),
+              React.createElement('div',{className:'stat-lbl'},'On Hold')
+            )
+          ),
+          React.createElement('div',{className:'user-pin'},
+            React.createElement('span',null,'PIN'),
+            React.createElement('span',{style:{color:'#3b82f6',letterSpacing:'.15em'}},u.pin)
+          )
+        );
+      })
+    )
+  );
+}
+
+function App(){
+  const [user,setUser]=useState(null);
+  const [jobs,setJobs]=useState([]);
+  const [tab,setTab]=useState('board');
+  const [lastSync,setLastSync]=useState('');
+  const pollRef=useRef();
+
+  async function loadJobs(){
+    const data=await storageGet(STORAGE_KEY);
+    if(data)setJobs(data);
+    setLastSync(new Date().toLocaleTimeString());
+  }
+
+  useEffect(()=>{
+    if(!user)return;
+    loadJobs();
+    pollRef.current=setInterval(loadJobs,4000);
+    return()=>clearInterval(pollRef.current);
+  },[user]);
+
+  if(!user)return React.createElement(LoginView,{onLogin:u=>{setUser(u);setTab('board')}});
+
+  const pendingCount=jobs.filter(j=>j.status==='pending').length;
+  const tabs=[
+    {key:'board',label:'BOARD',count:jobs.length,show:true},
+    {key:'admin',label:'USERS',count:USERS.length,show:user.role==='admin'},
+  ];
+
+  return React.createElement('div',{className:'app'},
+    React.createElement('div',{className:'header'},
+      React.createElement('div',{className:'header-left'},
+        React.createElement('div',null,
+          React.createElement('div',{className:'logo-text'},'tactical ops v2.0'),
+          React.createElement('div',{className:'logo-main'},React.createElement('span',{className:'live-dot'}),'URGENT JOBS')
+        )
+      ),
+      React.createElement('div',{className:'header-right'},
+        React.createElement('div',{className:'user-chip'},
+          React.createElement(Avatar,{user}),
+          React.createElement('span',{style:{fontFamily:'JetBrains Mono,monospace',fontSize:'.8rem'}},user.name),
+          React.createElement(RoleBadge,{role:user.role})
+        ),
+        React.createElement('button',{className:'btn-sm',onClick:()=>setUser(null)},'LOGOUT')
+      )
+    ),
+    React.createElement('div',{className:'sync-bar'},
+      React.createElement('span',{className:'sync-tick'},'●'),
+      'LIVE — Last sync: '+lastSync+' — Auto-refresh every 4s'
+    ),
+    React.createElement('div',{className:'nav-tabs'},
+      tabs.filter(t=>t.show).map(t=>React.createElement('div',{key:t.key,className:'nav-tab'+(tab===t.key?' active':''),onClick:()=>setTab(t.key)},
+        t.label,
+        React.createElement('span',{className:'count-pill'},t.count)
+      ))
+    ),
+    tab==='board'&&React.createElement(BoardView,{user,jobs,setJobs}),
+    tab==='admin'&&user.role==='admin'&&React.createElement(AdminView,{jobs,users:USERS})
+  );
+}
+
+ReactDOM.render(React.createElement(App),document.getElementById('root'));
+</script>
+</body>
+</html>
